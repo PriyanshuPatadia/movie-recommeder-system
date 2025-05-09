@@ -1,0 +1,25 @@
+import pandas as pd
+from surprise import Dataset, Reader, SVD
+import pickle
+
+# Load your ratings data
+ratings_df = pd.read_csv('ratings.csv')  # Ensure this file exists with userId, movieId, rating columns
+
+# Define the reader with rating scale
+reader = Reader(rating_scale=(1, 5))
+
+# Load data from dataframe
+data = Dataset.load_from_df(ratings_df[['userId', 'movieId', 'rating']], reader)
+
+# Build the trainset
+trainset = data.build_full_trainset()
+
+# Initialize the SVD algorithm
+algo = SVD()
+
+# Train the model
+algo.fit(trainset)
+
+# Save the trained model to movies.pkl
+with open('movies.pkl', 'wb') as f:
+    pickle.dump(algo, f)

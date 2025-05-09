@@ -1,0 +1,59 @@
+import pandas as pd
+import ast
+import pickle
+
+# Load datasets
+movies = pd.read_csv('tmdb_5000_movies.csv')
+credits = pd.read_csv('tmdb_5000_credits.csv')
+
+# Merge datasets on the 'title' column
+movies = movies.merge(credits, on='title')
+
+# Select relevant columns
+movies = movies[['movie_id','title','overview','genres','keywords','cast','crew']]
+
+# Drop rows with missing values
+movies.dropna(inplace=True)
+
+# Function to convert stringified lists into Python lists
+def convert(obj):
+    return [i['name'] for i in ast.literal_eval(obj)]
+
+# Function to extract top 3 cast members
+def convert_cast(obj):
+    return [i['name'] for i in ast.literal_eval(obj)[:3]]
+
+# Function to extract director's name
+def fetch_director(obj):
+    for i in ast.literal_eval(obj):
+        if i['job'] == 'Director':
+            return i['name']
+    return ''
+
+# Apply the functions to respective columns
+movies['genres'] = movies['genres'].apply(convert)
+movies['keywords'] = movies['keywords'].apply(convert)
+movies['cast'] = movies['cast'].apply(convert_cast)
+movies['crew'] = movies['crew'].apply(fetch_director)
+
+# Remove spaces and convert to lowercase
+movies['genres'] = movies['genres'].apply(lambda x: [i.replace(" ", "").lower() for i in x])
+movies['keywords'] = movies['keywords'].apply(lambda x: [i.replace(" ", "").lower() for i in x])
+movies['cast'] = movies['cast'].apply(lambda x: [i.replace(" ", "").lower() for i in x])
+movies['crew'] = movies['crew'].apply(lambda x: x.replace(" ", "").lower())
+
+# Create a 'tags' column by combining relevant features
+movies['tags'] = movies['overview'].apply(lambda x: x.lower()) + ' ' + \
+                 movies['genres'].apply(lambda x: ' '.join(x)) + ' ' + \
+                 movies['keywords'].apply(lambda x: ' '.join(x)) + ' ' + \
+                 movies['cast'].apply(lambda x: ' '.join(x)) + ' ' + \
+                 movies['crew']
+
+# Create a new DataFrame with selected columns
+new_df = movies[['movie_id', 'title', 'tags']]
+
+# Save the DataFrame as a pickle file
+with open('movie_list.pkl', 'wb') as f:
+    pickle.dump(new_df, f)
+
+print("movie_list.pkl created successfully.")
